@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SegVision QA - Mini-CVAT for BDD100K Semantic Segmentation</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 500: '#6366f1', 600: '#4f46e5' },
+            darkbg: '#0f172a',
+            darkpanel: '#1e293b',
+            darkborder: '#334155'
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    /* Tùy chỉnh thanh cuộn đẹp */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .slider-handle {
+      position: absolute;
+      top: 0; bottom: 0; width: 4px;
+      background: #38bdf8;
+      cursor: ew-resize;
+      z-index: 30;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
+    }
+    .slider-handle::after {
+      content: '↔';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 32px; height: 32px;
+      background: #0284c7;
+      color: white;
+      border: 2px solid white;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: bold;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body class="bg-darkbg text-slate-100 h-screen flex flex-col overflow-hidden select-none">
+
+  <!-- TOP BAR -->
+  <header class="h-14 bg-darkpanel border-b border-darkborder px-4 flex items-center justify-between z-40 shrink-0">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-sky-400 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">
+        SQ
+      </div>
+      <div>
+        <h1 class="text-sm font-bold tracking-wide flex items-center gap-2">
+          SegVision QA
+          <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium">BDD100K 19-Classes</span>
+        </h1>
+        <p class="text-[11px] text-slate-400">Mini-CVAT & Semantic Segmentation Evaluation Tool</p>
+      </div>
+    </div>
+
+    <!-- Center: Mode Selector -->
+    <div class="flex items-center bg-darkbg p-1 rounded-lg border border-darkborder text-xs font-medium">
+      <button id="modeInferBtn" class="px-3 py-1.5 rounded-md bg-brand-600 text-white shadow transition-all">
+        1. Dự đoán (Inference)
+      </button>
+      <button id="modeEvalBtn" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition-all">
+        2. Kiểm duyệt & Đo mIoU (QA Benchmark)
+      </button>
+    </div>
+
+    <!-- Right: Model & Hardware Specs -->
+    <div class="flex items-center space-x-3 text-xs">
+      <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-slate-800/80 border border-darkborder">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-slate-300">Model:</span>
+        <select id="modelSelector" class="bg-transparent text-sky-400 font-semibold focus:outline-none cursor-pointer text-xs">
+          <option value="fine_tuned" class="bg-slate-900 text-sky-400">SegFormer-B0 (BDD100K Fine-tuned)</option>
+          <option value="baseline" class="bg-slate-900 text-slate-300">SegFormer-B0 (Cityscapes Baseline)</option>
+        </select>
+      </div>
+      <div class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-darkborder mono text-slate-300" id="latencyBadge">
+        ⚡ 0 ms
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- LEFT PANEL: Upload & View Controls -->
+    <aside class="w-72 bg-darkpanel border-r border-darkborder flex flex-col shrink-0 p-3.5 space-y-4 overflow-y-auto">
+      
+      <!-- Quick Demo Samples -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">⚡ Thử ảnh mẫu có sẵn</label>
+          <span id="sampleCountBadge" class="text-[10px] text-sky-400 font-mono"></span>
+        </div>
+        <div id="sampleChipsContainer" class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <hr class="border-darkborder/60">
+
+      <!-- Upload Section -->
+      <div class="space-y-3">
+        <label class="text-xs font-semibold text-slate-300 tracking-wider uppercase block">Hoặc Tải ảnh của bạn</label>
+        
+        <!-- Input Image Box -->
+        <div id="imageDropzone" class="border-2 border-dashed border-darkborder hover:border-sky-500/60 rounded-xl p-3 text-center cursor-pointer transition-all bg-darkbg/50 group">
+          <input type="file" id="imageInput" accept="image/*" class="hidden">
+          <div class="space-y-1.5">
+            <svg class="w-7 h-7 mx-auto text-slate-400 group-hover:text-sky-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <p class="text-xs font-medium text-slate-300">Kéo thả hoặc Chọn ảnh gốc</p>
+            <p class="text-[10px] text-slate-500" id="imageFileName">Hỗ trợ JPG, PNG (BDD100k HD)</p>
+          </div>
+        </div>
+
+        <!-- Ground Truth Upload Box (Only shown in Evaluation Mode) -->
+        <div id="gtSection" class="hidden space-y-1.5 pt-1">
+          <div class="flex justify-between items-center">
+            <label class="text-[11px] font-semibold text-emerald-400 uppercase">Nhãn thật (Ground Truth Mask)</label>
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Cần cho mIoU</span>
+          </div>
+          <div id="gtDropzone" class="border-2 border-dashed border-emerald-500/30 hover:border-emerald-400/60 rounded-xl p-2.5 text-center cursor-pointer transition-all bg-emerald-950/10 group">
+            <input type="file" id="gtInput" accept="image/*" class="hidden">
+            <p class="text-xs font-medium text-emerald-300">Nạp ảnh mask Ground Truth</p>
+            <p class="text-[10px] text-emerald-500/80" id="gtFileName">File `_train_id.png` từ tập BDD</p>
+          </div>
+        </div>
+      </div>
+
+      <hr class="border-darkborder">
+
+      <!-- View Modes -->
+      <div class="space-y-2.5">
+        <label class="text-xs font-semibold text-slate-300 tracking-wider uppercase block">Chế độ hiển thị</label>
+        <div class="grid grid-cols-2 gap-1.5 text-xs">
+          <button id="viewSplitBtn" class="px-2.5 py-2 rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/40 font-medium text-left">
+            ↔ So sánh Split
+          </button>
+          <button id="viewOverlayBtn" class="px-2.5 py-2 rounded-lg bg-darkbg text-slate-400 border border-darkborder hover:text-white font-medium text-left">
+            ▦ Phủ màu Mask
+          </button>
+          <button id="viewErrorBtn" class="hidden col-span-2 px-2.5 py-2 rounded-lg bg-darkbg text-amber-300 border border-amber-500/30 hover:bg-amber-500/10 font-medium text-left">
+            🎯 Bản đồ lỗi (Error Map)
+          </button>
+          <button id="viewRawBtn" class="px-2.5 py-2 rounded-lg bg-darkbg text-slate-400 border border-darkborder hover:text-white font-medium text-left">
+            🖼 Chỉ ảnh gốc
+          </button>
+          <button id="viewGtBtn" class="hidden px-2.5 py-2 rounded-lg bg-darkbg text-slate-400 border border-darkborder hover:text-white font-medium text-left">
+            🏁 Chỉ Ground Truth
+          </button>
+        </div>
+      </div>
+
+      <!-- Opacity Slider -->
+      <div class="space-y-2">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-300 font-medium">Độ trong suốt Mask:</span>
+          <span class="mono text-sky-400 font-semibold" id="opacityVal">60%</span>
+        </div>
+        <input type="range" id="opacitySlider" min="0" max="100" value="60" class="w-full h-1.5 bg-darkbg rounded-lg appearance-none cursor-pointer accent-sky-500">
+      </div>
+
+      <div class="flex-1"></div>
+
+      <!-- Action Buttons -->
+      <div class="space-y-2 pt-2 border-t border-darkborder">
+        <button id="runBtn" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 hover:from-indigo-600 hover:to-sky-600 text-white font-semibold text-xs shadow-lg shadow-sky-500/20 flex items-center justify-center space-x-2 transition disabled:opacity-50">
+          <svg class="w-4 h-4 animate-spin hidden" id="loadingSpinner" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span id="runBtnText">Chạy Phân Vùng (Inference)</span>
+        </button>
+
+        <div class="grid grid-cols-2 gap-1.5">
+          <button id="exportMaskBtn" class="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-darkborder text-[11px] font-medium text-center">
+            💾 Tải Mask PNG
+          </button>
+          <button id="exportCsvBtn" class="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-darkborder text-[11px] font-medium text-center">
+            📊 Xuất Báo cáo CSV
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER: Interactive Image Canvas Workspace -->
+    <main class="flex-1 bg-slate-950 relative flex items-center justify-center overflow-hidden" id="canvasContainer">
+      
+      <!-- Placeholder when no image -->
+      <div id="canvasEmptyState" class="text-center p-8 text-slate-500 space-y-2">
+        <svg class="w-16 h-16 mx-auto stroke-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z" />
+        </svg>
+        <p class="text-sm font-medium">Chưa có ảnh nào được nạp</p>
+        <p class="text-xs text-slate-600">Chọn hoặc kéo thả một ảnh đường phố từ cột bên trái để bắt đầu</p>
+      </div>
+
+      <!-- Main Dual Canvas Wrapper -->
+      <div id="imageWrapper" class="relative hidden select-none max-w-full max-h-full">
+        <!-- Base Layer: Ảnh gốc -->
+        <img id="baseImage" class="max-w-full max-h-[calc(100vh-80px)] block object-contain pointer-events-none" alt="Original">
+        
+        <!-- Mask Overlay Layer -->
+        <canvas id="overlayCanvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+
+        <!-- Split Slider Handle -->
+        <div id="splitHandle" class="slider-handle hidden"></div>
+      </div>
+
+      <!-- Floating Zoom Controls -->
+      <div class="absolute bottom-4 right-4 bg-darkpanel/90 backdrop-blur border border-darkborder rounded-lg p-1 flex items-center space-x-1 shadow-xl z-30 text-xs">
+        <button id="zoomInBtn" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-800 text-slate-300 hover:text-white">+</button>
+        <button id="zoomResetBtn" class="px-2 h-7 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400 text-[11px] mono">100%</button>
+        <button id="zoomOutBtn" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-800 text-slate-300 hover:text-white">-</button>
+      </div>
+    </main>
+
+    <!-- RIGHT PANEL: Metrics & 19-Classes Filter -->
+    <aside class="w-80 bg-darkpanel border-l border-darkborder flex flex-col shrink-0 overflow-hidden">
+      
+      <!-- Metrics Dashboard Header (In Evaluation Mode) -->
+      <div id="metricsDashboard" class="p-3.5 border-b border-darkborder bg-slate-900/40 space-y-3 hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Kết quả Đánh giá</span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold">Live IoU QA</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <!-- mIoU Card -->
+          <div class="bg-gradient-to-br from-indigo-950/60 to-slate-900 border border-indigo-500/40 rounded-xl p-3">
+            <span class="text-[10px] text-indigo-300 uppercase font-medium">mIoU Toàn ảnh</span>
+            <div class="text-2xl font-bold text-white mono mt-1" id="mIouValue">--%</div>
+          </div>
+          <!-- Overall Accuracy Card -->
+          <div class="bg-gradient-to-br from-emerald-950/60 to-slate-900 border border-emerald-500/40 rounded-xl p-3">
+            <span class="text-[10px] text-emerald-300 uppercase font-medium">Pixel Accuracy</span>
+            <div class="text-2xl font-bold text-white mono mt-1" id="accValue">--%</div>
+          </div>
+        </div>
+
+        <!-- Error Heatmap Note -->
+        <div class="text-[11px] flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-800/60 border border-darkborder">
+          <div class="flex items-center space-x-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+            <span class="text-slate-300">Đoán đúng</span>
+          </div>
+          <div class="flex items-center space-x-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-400 inline-block"></span>
+            <span class="text-slate-300">Sai / Lem</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 19-Classes Filter & Distribution List -->
+      <div class="p-3 border-b border-darkborder flex items-center justify-between text-xs bg-darkpanel">
+        <span class="font-semibold text-slate-300 uppercase tracking-wider">Danh mục 19 Classes</span>
+        <button id="toggleAllClasses" class="text-[11px] text-sky-400 hover:underline">Bật/Tắt tất cả</button>
+      </div>
+
+      <!-- Scrollable Class List -->
+      <div class="flex-1 overflow-y-auto p-2 space-y-1" id="classListContainer">
+        <!-- Classes will be injected by JavaScript -->
+      </div>
+    </aside>
+
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+env/
+venv/
+ENV/
+
+# Dữ liệu lớn & file nén (Không đẩy lên Git)
+*.zip
+*.tar.gz
+*.7z
+bdd100k_data/
+bdd100k_sample_100/
+content/
+
+# Giữ lại bộ ảnh mẫu cho nhóm test ngay khi clone
+!segvision_app/demo_samples/**
+
+# Weights mô hình AI nặng (Lưu trữ trên Google Drive)
+*.safetensors
+*.bin
+*.pt
+*.pth
+segformer_bdd100k_best/
+segformer_bdd100k_b1_hd_best/
+results/
+results_hd/
+results_b1_hd/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Experiments & temporary files
+test/
+extracted_report.txt
+results.csv
+
