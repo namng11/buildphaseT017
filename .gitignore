@@ -19,12 +19,18 @@ content/
 # Giữ lại bộ ảnh mẫu cho nhóm test ngay khi clone
 !segvision_app/demo_samples/**
 
-# Weights mô hình AI nặng (Lưu trữ trên Google Drive)
-*.safetensors
+# Weights mô hình AI nặng
 *.bin
 *.pt
 *.pth
-segformer_bdd100k_best/
+*.safetensors
+
+# Cho phép đẩy model SegFormer-B0 để deploy lên Render (file chỉ 14.9MB, hoàn toàn nằm trong giới hạn 100MB của GitHub)
+!segformer_bdd100k_final_best/model/model.safetensors
+!segformer_bdd100k_best/
+!segformer_bdd100k_best/**
+!segformer_bdd100k_best/model.safetensors
+
 segformer_bdd100k_b1_hd_best/
 results/
 results_hd/

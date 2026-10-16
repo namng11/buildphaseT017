@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: segvision-qa
+    env: python
+    region: singapore
+    plan: free
+    buildCommand: pip install --upgrade pip && pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu && pip install -r segvision_app/requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT --app-dir segvision_app
+    autoDeploy: true
