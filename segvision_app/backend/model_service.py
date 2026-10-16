@@ -74,6 +74,13 @@ class SegFormerService:
         """
         orig_w, orig_h = image.size
         
+        # Giới hạn kích thước ảnh nếu quá lớn để không bị tràn 512MB RAM trên Render Free
+        max_dim = 1280
+        if max(orig_w, orig_h) > max_dim:
+            scale = max_dim / max(orig_w, orig_h)
+            image = image.resize((int(orig_w * scale), int(orig_h * scale)), Image.Resampling.BILINEAR)
+            orig_w, orig_h = image.size
+
         # 1. Tiền xử lý
         t0 = time.perf_counter()
         inputs = self.processor(images=image, return_tensors="pt")
@@ -82,7 +89,7 @@ class SegFormerService:
 
         # 2. Suy luận (Inference)
         t1 = time.perf_counter()
-        with torch.no_grad():
+        with torch.inference_mode():
             outputs = self.model(**inputs)
             logits = outputs.logits # (1, 19, H_feat, W_feat)
         t_inf = (time.perf_counter() - t1) * 1000
@@ -96,6 +103,10 @@ class SegFormerService:
             align_corners=False
         )
         pred_seg = upsampled_logits.argmax(dim=1)[0].cpu().numpy().astype(np.uint8)
+        del inputs, outputs, logits, upsampled_logits
+        import gc
+        gc.collect()
+        t_post = (time.perf_counter() - t2) * 1000
         
         # Tạo ảnh mask màu
         color_mask = np.zeros((orig_h, orig_w, 3), dtype=np.uint8)
@@ -145,13 +156,17 @@ class SegFormerService:
         orig_w, orig_h = image.size
         inputs = processor(images=image, return_tensors="pt")
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
-        with torch.no_grad():
+        with torch.inference_mode():
             outputs = model(**inputs)
             logits = outputs.logits
         upsampled = torch.nn.functional.interpolate(
             logits, size=(orig_h, orig_w), mode="bilinear", align_corners=False
         )
-        return upsampled.argmax(dim=1)[0].cpu().numpy().astype(np.uint8)
+        res = upsampled.argmax(dim=1)[0].cpu().numpy().astype(np.uint8)
+        del inputs, outputs, logits, upsampled
+        import gc
+        gc.collect()
+        return res
 
     def predict_ab_comparison(self, image: Image.Image) -> Dict[str, Any]:
         """

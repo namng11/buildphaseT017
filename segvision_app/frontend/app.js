@@ -633,8 +633,14 @@ async function runAbComparison() {
       body: formData
     });
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Lỗi gọi API so sánh A/B');
+      let msg = 'Lỗi gọi API so sánh A/B';
+      try {
+        const err = await res.json();
+        msg = err.detail || msg;
+      } catch (je) {
+        msg = `Máy chủ phản hồi lỗi (${res.status} ${res.statusText})`;
+      }
+      throw new Error(msg);
     }
     const data = await res.json();
     state.abResult = data;
@@ -705,8 +711,14 @@ async function runProcessing() {
     });
 
     if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.detail || 'Lỗi server');
+      let msg = 'Lỗi server';
+      try {
+        const errData = await res.json();
+        msg = errData.detail || msg;
+      } catch (je) {
+        msg = `Máy chủ đang tải hoặc phản hồi lỗi (${res.status} ${res.statusText})`;
+      }
+      throw new Error(msg);
     }
 
     const data = await res.json();

@@ -180,10 +180,13 @@ async def predict_image(image: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=f"Không thể đọc file ảnh: {str(e)}")
 
     # Chạy suy luận
-    result = model_service.predict(pil_image)
-    
-    # Chuẩn bị ảnh gốc dạng Base64 để hiển thị trên web
-    orig_base64 = numpy_to_base64_png(np.array(pil_image))
+    try:
+        result = model_service.predict(pil_image)
+        orig_base64 = numpy_to_base64_png(np.array(pil_image))
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Lỗi suy luận mô hình: {str(e)}")
 
     return {
         "status": "success",
@@ -210,11 +213,16 @@ async def predict_ab_endpoint(image: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Không thể đọc file ảnh: {str(e)}")
 
-    res = model_service.predict_ab_comparison(pil_image)
-    orig_base64 = numpy_to_base64_png(np.array(pil_image))
-    res["original_base64"] = orig_base64
-    res["status"] = "success"
-    return res
+    try:
+        res = model_service.predict_ab_comparison(pil_image)
+        orig_base64 = numpy_to_base64_png(np.array(pil_image))
+        res["original_base64"] = orig_base64
+        res["status"] = "success"
+        return res
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Lỗi so sánh A/B: {str(e)}")
 
 
 
@@ -237,8 +245,13 @@ async def evaluate_image(
         raise HTTPException(status_code=400, detail=f"Lỗi khi đọc file ảnh hoặc nhãn thật: {str(e)}")
 
     # 1. Chạy AI dự đoán
-    pred_res = model_service.predict(pil_img)
-    pred_mask = pred_res["pred_mask"]
+    try:
+        pred_res = model_service.predict(pil_img)
+        pred_mask = pred_res["pred_mask"]
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Lỗi suy luận ảnh kiểm duyệt: {str(e)}")
 
     # 2. Xử lý ảnh nhãn Ground Truth (đảm bảo cùng kích thước với ảnh dự đoán)
     if pil_gt.size != pil_img.size:
