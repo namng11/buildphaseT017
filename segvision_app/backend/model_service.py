@@ -9,6 +9,9 @@ from PIL import Image
 import torch
 from transformers import SegformerImageProcessor, SegformerForSemanticSegmentation
 
+# Khóa 1 luồng để tiết kiệm RAM trên container Render Free 512MB
+torch.set_num_threads(1)
+
 from .constants import COLOR_PALETTE, CLASS_NAMES, IGNORE_INDEX
 from .evaluator import numpy_to_base64_png
 
@@ -75,7 +78,7 @@ class SegFormerService:
         orig_w, orig_h = image.size
         
         # Giới hạn kích thước ảnh nếu quá lớn để không bị tràn 512MB RAM trên Render Free
-        max_dim = 1280
+        max_dim = 1024
         if max(orig_w, orig_h) > max_dim:
             scale = max_dim / max(orig_w, orig_h)
             image = image.resize((int(orig_w * scale), int(orig_h * scale)), Image.Resampling.BILINEAR)
@@ -94,18 +97,25 @@ class SegFormerService:
             logits = outputs.logits # (1, 19, H_feat, W_feat)
         t_inf = (time.perf_counter() - t1) * 1000
 
-        # 3. Hậu xử lý (Upsample về kích thước ảnh gốc & argmax)
+        # 3. Hậu xử lý (Tối ưu RAM: interpolate ở kích thước nhỏ gọn rồi argmax sang uint8)
         t2 = time.perf_counter()
+        target_interp_h = min(orig_h, 512)
+        target_interp_w = min(orig_w, 512)
         upsampled_logits = torch.nn.functional.interpolate(
             logits,
-            size=(orig_h, orig_w),
+            size=(target_interp_h, target_interp_w),
             mode="bilinear",
             align_corners=False
         )
-        pred_seg = upsampled_logits.argmax(dim=1)[0].cpu().numpy().astype(np.uint8)
+        pred_small = upsampled_logits.argmax(dim=1)[0].cpu().numpy().astype(np.uint8)
         del inputs, outputs, logits, upsampled_logits
         import gc
         gc.collect()
+
+        if (target_interp_w, target_interp_h) != (orig_w, orig_h):
+            pred_seg = np.array(Image.fromarray(pred_small).resize((orig_w, orig_h), resample=Image.Resampling.NEAREST))
+        else:
+            pred_seg = pred_small
         t_post = (time.perf_counter() - t2) * 1000
         
         # Tạo ảnh mask màu
@@ -159,13 +169,20 @@ class SegFormerService:
         with torch.inference_mode():
             outputs = model(**inputs)
             logits = outputs.logits
+        target_interp_h = min(orig_h, 512)
+        target_interp_w = min(orig_w, 512)
         upsampled = torch.nn.functional.interpolate(
-            logits, size=(orig_h, orig_w), mode="bilinear", align_corners=False
+            logits, size=(target_interp_h, target_interp_w), mode="bilinear", align_corners=False
         )
-        res = upsampled.argmax(dim=1)[0].cpu().numpy().astype(np.uint8)
+        pred_small = upsampled.argmax(dim=1)[0].cpu().numpy().astype(np.uint8)
         del inputs, outputs, logits, upsampled
         import gc
         gc.collect()
+
+        if (target_interp_w, target_interp_h) != (orig_w, orig_h):
+            res = np.array(Image.fromarray(pred_small).resize((orig_w, orig_h), resample=Image.Resampling.NEAREST))
+        else:
+            res = pred_small
         return res
 
     def predict_ab_comparison(self, image: Image.Image) -> Dict[str, Any]:
