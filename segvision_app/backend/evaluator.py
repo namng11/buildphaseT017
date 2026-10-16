@@ -115,3 +115,108 @@ def evaluate_segmentation(
         "classes": per_class_results,
         "error_map_base64": numpy_to_base64_png(error_map)
     }
+
+
+def compute_adas_telemetry(pred_mask: np.ndarray, orig_img_arr: np.ndarray) -> Dict[str, Any]:
+    """
+    Ước lượng khoảng cách đơn giác (Monocular Distance Proxy) và trích xuất hành lang lái an toàn.
+    Ánh xạ từ 2D pixel sang tọa độ mét theo nguyên lý Ground-Plane Geometry (chuẩn ADAS Mobileye).
+    """
+    import cv2
+    h, w = pred_mask.shape
+    vis = orig_img_arr.copy()
+    
+    # 1. Phủ màu hành lang lái xe (Road corridor) - Dùng màu xanh lá chuẩn #16A34A [22, 163, 74]
+    road_mask = (pred_mask == 0).astype(np.uint8)
+    road_pixels = int(np.sum(road_mask))
+    road_ratio = round((road_pixels / (h * w)) * 100, 1)
+    
+    vis[road_mask == 1] = (vis[road_mask == 1] * 0.72 + np.array([22, 163, 74]) * 0.28).astype(np.uint8)
+
+    # 2. Phát hiện và đo khoảng cách các vật thể chướng ngại vật
+    OBSTACLE_CLASSES = {
+        11: ("Person", (220, 38, 38)),      # Red
+        12: ("Rider", (245, 158, 11)),      # Amber
+        13: ("Car", (37, 99, 235)),         # Blue
+        14: ("Truck", (124, 58, 237)),      # Purple
+        15: ("Bus", (13, 148, 136)),        # Teal
+        17: ("Motorcycle", (234, 88, 12)),  # Orange
+        18: ("Bicycle", (16, 185, 129))     # Green
+    }
+
+    detected_objects = []
+    min_dist = 999.0
+
+    y_horizon = int(h * 0.48)
+    h_cam = 1.35  # Độ cao camera kính lái tiêu chuẩn (mét)
+
+    for cid, (cname, default_color) in OBSTACLE_CLASSES.items():
+        obj_mask = (pred_mask == cid).astype(np.uint8)
+        contours, _ = cv2.findContours(obj_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area < 180:
+                continue
+            
+            x, y, bw, bh = cv2.boundingRect(cnt)
+            y_bottom = y + bh
+            x_center = x + bw // 2
+
+            # Ước tính khoảng cách Z mét bằng lượng giác mặt đất phẳng
+            dy = max(6, y_bottom - y_horizon)
+            dist_m = round((h_cam * (h * 0.90)) / dy, 1)
+            dist_m = float(np.clip(dist_m, 1.5, 45.0))
+
+            if dist_m < min_dist:
+                min_dist = dist_m
+
+            # Phân loại mức độ cảnh báo (Rõ ràng, không neon)
+            if dist_m <= 4.5:
+                tag_color = (220, 38, 38)   # Đỏ nguy hiểm
+                risk_level = "BRAKE"
+            elif dist_m <= 9.0:
+                tag_color = (245, 158, 11)  # Vàng chú ý
+                risk_level = "WARNING"
+            else:
+                tag_color = (37, 99, 235)   # Xanh an toàn
+                risk_level = "SAFE"
+
+            # Vẽ bounding box mảnh 1.5px
+            cv2.rectangle(vis, (x, y), (x + bw, y + bh), tag_color, 2)
+            
+            # Vẽ tag nhãn tinh gọn
+            tag_text = f"{cname} {dist_m:.1f}m | {risk_level}"
+            (tw, th), _ = cv2.getTextSize(tag_text, cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)
+            cv2.rectangle(vis, (x, max(0, y - th - 6)), (x + tw + 6, max(th + 6, y)), tag_color, -1)
+            cv2.putText(vis, tag_text, (x + 3, max(th + 2, y - 3)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1, cv2.LINE_AA)
+
+            detected_objects.append({
+                "class_id": cid,
+                "class_name": cname,
+                "distance_m": dist_m,
+                "risk_level": risk_level,
+                "bbox": [x, y, bw, bh]
+            })
+
+    # Đánh giá trạng thái chung của xe
+    if min_dist <= 4.5:
+        system_status = "CRITICAL BRAKE"
+        status_color = "#DC2626"
+    elif min_dist <= 9.0:
+        system_status = "CAUTION"
+        status_color = "#F59E0B"
+    else:
+        system_status = "SAFE"
+        status_color = "#16A34A"
+
+    return {
+        "adas_overlay_base64": numpy_to_base64_png(vis),
+        "objects": detected_objects,
+        "object_count": len(detected_objects),
+        "closest_distance_m": min_dist if min_dist < 999.0 else None,
+        "system_status": system_status,
+        "status_color": status_color,
+        "road_coverage_pct": road_ratio
+    }
+

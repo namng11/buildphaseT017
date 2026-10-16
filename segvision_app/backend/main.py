@@ -118,26 +118,32 @@ async def get_classes():
 @app.get("/api/model_info")
 async def get_model_info():
     """Trả về thông tin model hiện tại đang nạp và các model khả dụng."""
-    local_custom_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "segformer_bdd100k_best"))
-    has_fine_tuned = os.path.exists(local_custom_path) and os.path.exists(os.path.join(local_custom_path, "config.json"))
+    final_best_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "segformer_bdd100k_final_best", "model"))
+    v1_best_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "segformer_bdd100k_best"))
     
     return {
         "current_model": model_service.model_display_name,
         "current_path": model_service.model_name,
         "device": str(model_service.device).upper(),
-        "has_fine_tuned": has_fine_tuned
+        "has_v2": os.path.exists(final_best_path),
+        "has_v1": os.path.exists(v1_best_path)
     }
 
 
 @app.post("/api/switch_model")
 async def switch_model(target: str = Form(...)):
-    """Chuyển đổi giữa mô hình Fine-tuned của nhóm và Pretrained Baseline."""
-    local_custom_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "segformer_bdd100k_best"))
-    
-    if target == "fine_tuned":
-        if not os.path.exists(local_custom_path):
-            raise HTTPException(status_code=404, detail="Không tìm thấy thư mục segformer_bdd100k_best")
-        model_service.load_model(local_custom_path, display_name="SegFormer-B0 (BDD100K Fine-tuned)")
+    """Chuyển đổi giữa các mô hình: v2 (56.77% mIoU), v1 (44.22%), và Cityscapes Baseline."""
+    final_best_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "segformer_bdd100k_final_best", "model"))
+    v1_best_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "segformer_bdd100k_best"))
+
+    if target in ("fine_tuned_v2", "fine_tuned", "v2"):
+        if not os.path.exists(final_best_path):
+            raise HTTPException(status_code=404, detail="Không tìm thấy segformer_bdd100k_final_best")
+        model_service.load_model(final_best_path, display_name="SegFormer-B0 (BDD100K Fine-tuned v2 - 56.77% mIoU)")
+    elif target in ("fine_tuned_v1", "v1"):
+        if not os.path.exists(v1_best_path):
+            raise HTTPException(status_code=404, detail="Không tìm thấy segformer_bdd100k_best")
+        model_service.load_model(v1_best_path, display_name="SegFormer-B0 (BDD100K Fine-tuned v1 - 44.22% mIoU)")
     else:
         baseline_name = "nvidia/segformer-b0-finetuned-cityscapes-1024-1024"
         model_service.load_model(baseline_name, display_name="SegFormer-B0 (Cityscapes Baseline)")
@@ -149,11 +155,23 @@ async def switch_model(target: str = Form(...)):
     }
 
 
+@app.get("/api/audit_report")
+async def get_audit_report():
+    """Trả về số liệu báo cáo benchmark chính thức từ quá trình huấn luyện của nhóm."""
+    metrics_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "segformer_bdd100k_final_best", "logs", "best_metrics.json"))
+    import json
+    if os.path.exists(metrics_path):
+        with open(metrics_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data
+    return {"message": "Chưa tìm thấy best_metrics.json"}
+
+
 @app.post("/api/predict")
 async def predict_image(image: UploadFile = File(...)):
     """
     Chế độ 1: Dự đoán & Trực quan hóa
-    Nhận ảnh đầu vào -> Chạy SegFormer -> Trả về lớp mask màu và phân bố % pixel.
+    Nhận ảnh đầu vào -> Chạy SegFormer -> Trả về lớp mask màu, phân bố pixel và thông số ADAS.
     """
     try:
         image_bytes = await image.read()
@@ -171,11 +189,33 @@ async def predict_image(image: UploadFile = File(...)):
         "status": "success",
         "original_base64": orig_base64,
         "color_mask_base64": result["color_mask_base64"],
+        "adas_telemetry": result.get("adas_telemetry"),
         "distribution": result["distribution"],
         "width": result["width"],
         "height": result["height"],
         "latency": result["latency"]
     }
+
+
+@app.post("/api/predict_ab")
+async def predict_ab_endpoint(image: UploadFile = File(...)):
+    """
+    Đòn 1: Chế độ So sánh Đối chứng A/B
+    Nhận ảnh đầu vào -> Chạy đồng thời Model A (v1/baseline) và Model B (v2 56.77%)
+    Trả về 2 mask để so sánh trên Canvas và bảng thống kê cải thiện.
+    """
+    try:
+        image_bytes = await image.read()
+        pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Không thể đọc file ảnh: {str(e)}")
+
+    res = model_service.predict_ab_comparison(pil_image)
+    orig_base64 = numpy_to_base64_png(np.array(pil_image))
+    res["original_base64"] = orig_base64
+    res["status"] = "success"
+    return res
+
 
 
 @app.post("/api/evaluate")
@@ -185,7 +225,7 @@ async def evaluate_image(
 ):
     """
     Chế độ 2: Kiểm duyệt & Đánh giá Ground Truth (Benchmark/QA Mode)
-    Nhận ảnh gốc + ảnh Ground Truth Mask -> Tính toán mIoU, per-class IoU và sinh Error Map.
+    Nhận ảnh gốc + ảnh Ground Truth Mask -> Tính toán mIoU, per-class IoU, sinh Error Map và ADAS.
     """
     try:
         img_bytes = await image.read()
@@ -219,6 +259,7 @@ async def evaluate_image(
         "status": "success",
         "original_base64": numpy_to_base64_png(np.array(pil_img)),
         "color_mask_base64": pred_res["color_mask_base64"],
+        "adas_telemetry": pred_res.get("adas_telemetry"),
         "gt_color_base64": gt_color_base64,
         "error_map_base64": eval_res["error_map_base64"],
         "mean_iou": eval_res["mean_iou"],
@@ -227,6 +268,7 @@ async def evaluate_image(
         "distribution": pred_res["distribution"],
         "latency": pred_res["latency"]
     }
+
 
 
 if __name__ == "__main__":

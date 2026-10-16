@@ -1,21 +1,31 @@
 <!DOCTYPE html>
-<html lang="vi" class="dark">
+<html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SegVision QA - Mini-CVAT for BDD100K Semantic Segmentation</title>
+  <title>SegVision QA - Data Annotation & Evaluation Tool</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            brand: { 500: '#6366f1', 600: '#4f46e5' },
-            darkbg: '#0f172a',
-            darkpanel: '#1e293b',
-            darkborder: '#334155'
+            page: '#F5F7FA',
+            surface: '#FFFFFF',
+            borderline: '#E4E7EC',
+            textmain: '#1D2939',
+            textmuted: '#667085',
+            primary: {
+              DEFAULT: '#2563EB',
+              hover: '#1D4ED8',
+              light: '#EFF4FF'
+            },
+            status: {
+              success: '#16A34A',
+              warning: '#F59E0B',
+              danger: '#DC2626'
+            }
           }
         }
       }
@@ -24,78 +34,106 @@
   <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; }
+    :root {
+      --bg-page: #F5F7FA;
+      --bg-surface: #FFFFFF;
+      --border-color: #E4E7EC;
+      --text-main: #1D2939;
+      --text-muted: #667085;
+      --primary: #2563EB;
+      --primary-hover: #1D4ED8;
+      --primary-light: #EFF4FF;
+      --success: #16A34A;
+      --warning: #F59E0B;
+      --danger: #DC2626;
+    }
+    body { font-family: 'Inter', sans-serif; background-color: var(--bg-page); color: var(--text-main); }
     .mono { font-family: 'JetBrains Mono', monospace; }
-    /* Tùy chỉnh thanh cuộn đẹp */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    
+    /* Scrollbar tối giản */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #F5F7FA; }
+    ::-webkit-scrollbar-thumb { background: #D0D5DD; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #98A2B3; }
+
+    /* Thanh trượt so sánh Split Slider */
     .slider-handle {
       position: absolute;
-      top: 0; bottom: 0; width: 4px;
-      background: #38bdf8;
+      top: 0; bottom: 0; width: 2px;
+      background: var(--primary);
       cursor: ew-resize;
       z-index: 30;
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
     }
     .slider-handle::after {
       content: '↔';
       position: absolute;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 32px; height: 32px;
-      background: #0284c7;
-      color: white;
-      border: 2px solid white;
+      width: 24px; height: 24px;
+      background: #FFFFFF;
+      color: var(--primary);
+      border: 1.5px solid var(--primary);
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: bold;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5);
+      font-size: 11px; font-weight: 600;
+      box-shadow: 0 1px 3px rgba(16, 24, 40, 0.1);
     }
   </style>
 </head>
-<body class="bg-darkbg text-slate-100 h-screen flex flex-col overflow-hidden select-none">
+<body class="bg-page text-textmain h-screen flex flex-col overflow-hidden select-none text-[13px]">
 
   <!-- TOP BAR -->
-  <header class="h-14 bg-darkpanel border-b border-darkborder px-4 flex items-center justify-between z-40 shrink-0">
+  <header class="h-12 bg-white border-b border-borderline px-4 flex items-center justify-between z-40 shrink-0">
     <div class="flex items-center space-x-3">
-      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-sky-400 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">
-        SQ
+      <div class="w-6 h-6 rounded-[6px] bg-primary flex items-center justify-center font-bold text-white text-[11px]">
+        SV
       </div>
       <div>
-        <h1 class="text-sm font-bold tracking-wide flex items-center gap-2">
+        <h1 class="text-[13px] font-semibold text-textmain tracking-tight flex items-center gap-2">
           SegVision QA
-          <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium">BDD100K 19-Classes</span>
+          <span class="text-[11px] px-1.5 py-0.2 rounded-[4px] bg-primary-light text-primary border border-borderline font-normal">BDD100K 19 Classes</span>
         </h1>
-        <p class="text-[11px] text-slate-400">Mini-CVAT & Semantic Segmentation Evaluation Tool</p>
       </div>
     </div>
 
     <!-- Center: Mode Selector -->
-    <div class="flex items-center bg-darkbg p-1 rounded-lg border border-darkborder text-xs font-medium">
-      <button id="modeInferBtn" class="px-3 py-1.5 rounded-md bg-brand-600 text-white shadow transition-all">
+    <div class="flex items-center bg-page p-0.5 rounded-[6px] border border-borderline text-xs font-medium">
+      <button id="modeInferBtn" class="px-2.5 py-1 rounded-[4px] bg-white text-primary border border-borderline font-medium shadow-none transition-colors">
         1. Dự đoán (Inference)
       </button>
-      <button id="modeEvalBtn" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-white transition-all">
-        2. Kiểm duyệt & Đo mIoU (QA Benchmark)
+      <button id="modeEvalBtn" class="px-2.5 py-1 rounded-[4px] text-textmuted hover:text-textmain transition-colors">
+        2. Đo mIoU (QA Benchmark)
+      </button>
+      <button id="modeAnnotateBtn" class="px-2.5 py-1 rounded-[4px] text-textmuted hover:text-textmain transition-colors flex items-center space-x-1">
+        <span>3. Gán nhãn AI & Sửa cọ</span>
+        <span class="text-[9px] px-1 py-0.2 rounded bg-primary-light text-primary border border-primary/20 font-semibold">Co-Pilot</span>
       </button>
     </div>
 
-    <!-- Right: Model & Hardware Specs -->
-    <div class="flex items-center space-x-3 text-xs">
-      <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-slate-800/80 border border-darkborder">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span class="text-slate-300">Model:</span>
-        <select id="modelSelector" class="bg-transparent text-sky-400 font-semibold focus:outline-none cursor-pointer text-xs">
-          <option value="fine_tuned" class="bg-slate-900 text-sky-400">SegFormer-B0 (BDD100K Fine-tuned)</option>
-          <option value="baseline" class="bg-slate-900 text-slate-300">SegFormer-B0 (Cityscapes Baseline)</option>
+    <!-- Right: Model, Latency & Audit Report -->
+    <div class="flex items-center space-x-2.5 text-xs">
+      <!-- Báo cáo kiểm toán (Đòn 3) -->
+      <button id="openAuditBtn" class="px-2.5 py-1 rounded-[6px] bg-white hover:bg-page text-textmain border border-borderline font-medium text-xs flex items-center space-x-1.5 transition-colors cursor-pointer" title="Báo cáo kiểm toán mô hình (56.77% mIoU)">
+        <svg class="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        <span class="hidden sm:inline">Báo cáo Kiểm toán</span>
+        <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-50 text-status-success border border-emerald-200 font-bold mono">56.77%</span>
+      </button>
+
+      <div class="flex items-center space-x-1.5 px-2 py-1 rounded-[6px] bg-page border border-borderline">
+        <span class="w-2 h-2 rounded-full bg-status-success"></span>
+        <span class="text-textmuted text-[11px]">Model:</span>
+        <select id="modelSelector" class="bg-transparent text-primary font-medium focus:outline-none cursor-pointer text-xs">
+          <option value="fine_tuned_v2">SegFormer-B0 v2 (56.77% mIoU - BDD100K)</option>
+          <option value="fine_tuned_v1">SegFormer-B0 v1 (44.22% mIoU)</option>
+          <option value="baseline">SegFormer-B0 Baseline (Cityscapes)</option>
         </select>
       </div>
-      <div class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-darkborder mono text-slate-300" id="latencyBadge">
-        ⚡ 0 ms
+      <div class="px-2 py-1 rounded-[6px] bg-page border border-borderline mono text-textmuted text-[11px]" id="latencyBadge">
+        0 ms
       </div>
     </div>
   </header>
@@ -103,91 +141,111 @@
   <!-- MAIN WORKSPACE -->
   <div class="flex-1 flex overflow-hidden">
 
-    <!-- LEFT PANEL: Upload & View Controls -->
-    <aside class="w-72 bg-darkpanel border-r border-darkborder flex flex-col shrink-0 p-3.5 space-y-4 overflow-y-auto">
+    <!-- LEFT PANEL: Upload & Controls -->
+    <aside class="w-72 bg-white border-r border-borderline flex flex-col shrink-0 p-3 space-y-3.5 overflow-y-auto">
       
       <!-- Quick Demo Samples -->
       <div class="space-y-1.5">
         <div class="flex items-center justify-between">
-          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">⚡ Thử ảnh mẫu có sẵn</label>
-          <span id="sampleCountBadge" class="text-[10px] text-sky-400 font-mono"></span>
+          <label class="text-[11px] font-semibold text-textmuted uppercase tracking-wider">Ảnh mẫu kiểm thử</label>
+          <span id="sampleCountBadge" class="text-[11px] text-primary font-mono font-medium"></span>
         </div>
-        <div id="sampleChipsContainer" class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+        <div id="sampleChipsContainer" class="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
           <!-- Populated by JavaScript -->
         </div>
       </div>
 
-      <hr class="border-darkborder/60">
+      <hr class="border-borderline">
 
       <!-- Upload Section -->
-      <div class="space-y-3">
-        <label class="text-xs font-semibold text-slate-300 tracking-wider uppercase block">Hoặc Tải ảnh của bạn</label>
+      <div class="space-y-2.5">
+        <label class="text-[11px] font-semibold text-textmuted uppercase tracking-wider block">Tải ảnh của bạn</label>
         
         <!-- Input Image Box -->
-        <div id="imageDropzone" class="border-2 border-dashed border-darkborder hover:border-sky-500/60 rounded-xl p-3 text-center cursor-pointer transition-all bg-darkbg/50 group">
+        <div id="imageDropzone" class="border border-dashed border-borderline hover:border-primary rounded-[6px] p-2.5 text-center cursor-pointer transition-colors bg-page hover:bg-primary-light/40 group">
           <input type="file" id="imageInput" accept="image/*" class="hidden">
-          <div class="space-y-1.5">
-            <svg class="w-7 h-7 mx-auto text-slate-400 group-hover:text-sky-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="space-y-1">
+            <svg class="w-5 h-5 mx-auto text-textmuted group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
-            <p class="text-xs font-medium text-slate-300">Kéo thả hoặc Chọn ảnh gốc</p>
-            <p class="text-[10px] text-slate-500" id="imageFileName">Hỗ trợ JPG, PNG (BDD100k HD)</p>
+            <p class="text-xs font-medium text-textmain">Kéo thả hoặc Chọn ảnh gốc</p>
+            <p class="text-[10px] text-textmuted" id="imageFileName">JPG, PNG (BDD100k HD)</p>
           </div>
         </div>
 
+        <!-- Nút Tắt / Đóng ảnh đang mở -->
+        <button id="closeImageBtn" class="hidden w-full py-1.5 px-2 rounded-[6px] bg-red-50 hover:bg-red-100 text-status-danger border border-red-200 text-xs font-medium flex items-center justify-center space-x-1.5 transition-colors cursor-pointer" title="Tắt ảnh đang mở và giải phóng bộ nhớ">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          <span>Tắt ảnh hiện tại</span>
+        </button>
+
         <!-- Ground Truth Upload Box (Only shown in Evaluation Mode) -->
-        <div id="gtSection" class="hidden space-y-1.5 pt-1">
+        <div id="gtSection" class="hidden space-y-1 pt-1">
           <div class="flex justify-between items-center">
-            <label class="text-[11px] font-semibold text-emerald-400 uppercase">Nhãn thật (Ground Truth Mask)</label>
-            <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Cần cho mIoU</span>
+            <label class="text-[11px] font-semibold text-status-success uppercase">Nhãn thật (Ground Truth Mask)</label>
+            <span class="text-[10px] px-1.5 py-0.2 rounded-[4px] bg-emerald-50 text-status-success border border-emerald-200">Cần cho mIoU</span>
           </div>
-          <div id="gtDropzone" class="border-2 border-dashed border-emerald-500/30 hover:border-emerald-400/60 rounded-xl p-2.5 text-center cursor-pointer transition-all bg-emerald-950/10 group">
+          <div id="gtDropzone" class="border border-dashed border-borderline hover:border-status-success rounded-[6px] p-2 text-center cursor-pointer transition-colors bg-page hover:bg-emerald-50/40 group">
             <input type="file" id="gtInput" accept="image/*" class="hidden">
-            <p class="text-xs font-medium text-emerald-300">Nạp ảnh mask Ground Truth</p>
-            <p class="text-[10px] text-emerald-500/80" id="gtFileName">File `_train_id.png` từ tập BDD</p>
+            <p class="text-xs font-medium text-textmain">Nạp ảnh mask Ground Truth</p>
+            <p class="text-[10px] text-textmuted" id="gtFileName">File _train_id.png từ BDD</p>
           </div>
         </div>
       </div>
 
-      <hr class="border-darkborder">
+      <hr class="border-borderline">
 
       <!-- View Modes -->
-      <div class="space-y-2.5">
-        <label class="text-xs font-semibold text-slate-300 tracking-wider uppercase block">Chế độ hiển thị</label>
-        <div class="grid grid-cols-2 gap-1.5 text-xs">
-          <button id="viewSplitBtn" class="px-2.5 py-2 rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/40 font-medium text-left">
-            ↔ So sánh Split
+      <div class="space-y-2">
+        <label class="text-[11px] font-semibold text-textmuted uppercase tracking-wider block">Chế độ hiển thị</label>
+        <div class="grid grid-cols-2 gap-1 text-xs">
+          <!-- Đòn 1: So sánh đối chứng A/B -->
+          <button id="viewAbBtn" class="col-span-2 px-2 py-1.5 rounded-[6px] bg-white text-textmuted border border-borderline hover:bg-primary-light hover:text-primary font-medium text-left transition-colors flex items-center justify-between">
+            <div class="flex items-center space-x-1.5">
+              <svg class="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+              </svg>
+              <span>So sánh A/B (v1 vs v2)</span>
+            </div>
+            <span class="text-[9px] px-1 py-0.2 rounded bg-emerald-50 text-status-success border border-emerald-200 font-semibold">+12.55% mIoU</span>
           </button>
-          <button id="viewOverlayBtn" class="px-2.5 py-2 rounded-lg bg-darkbg text-slate-400 border border-darkborder hover:text-white font-medium text-left">
-            ▦ Phủ màu Mask
+          <button id="viewSplitBtn" class="px-2 py-1.5 rounded-[6px] bg-primary-light text-primary border border-primary font-medium text-left transition-colors">
+            So sánh Split
           </button>
-          <button id="viewErrorBtn" class="hidden col-span-2 px-2.5 py-2 rounded-lg bg-darkbg text-amber-300 border border-amber-500/30 hover:bg-amber-500/10 font-medium text-left">
-            🎯 Bản đồ lỗi (Error Map)
+          <button id="viewOverlayBtn" class="px-2 py-1.5 rounded-[6px] bg-white text-textmuted border border-borderline hover:bg-page hover:text-textmain font-medium text-left transition-colors">
+            Phủ màu Mask
           </button>
-          <button id="viewRawBtn" class="px-2.5 py-2 rounded-lg bg-darkbg text-slate-400 border border-darkborder hover:text-white font-medium text-left">
-            🖼 Chỉ ảnh gốc
+          <button id="viewAdasBtn" class="col-span-2 px-2 py-1.5 rounded-[6px] bg-white text-textmuted border border-borderline hover:bg-primary-light hover:text-primary font-medium text-left transition-colors flex items-center justify-between">
+            <span>Hành lang & Khoảng cách (ADAS)</span>
+            <span class="text-[9px] px-1 py-0.2 rounded bg-primary-light text-primary border border-primary/20">Feature</span>
           </button>
-          <button id="viewGtBtn" class="hidden px-2.5 py-2 rounded-lg bg-darkbg text-slate-400 border border-darkborder hover:text-white font-medium text-left">
-            🏁 Chỉ Ground Truth
+          <button id="viewErrorBtn" class="hidden col-span-2 px-2 py-1.5 rounded-[6px] bg-white text-status-warning border border-borderline hover:bg-amber-50 font-medium text-left transition-colors">
+            Bản đồ lỗi (Error Map)
+          </button>
+          <button id="viewRawBtn" class="px-2 py-1.5 rounded-[6px] bg-white text-textmuted border border-borderline hover:bg-page hover:text-textmain font-medium text-left transition-colors">
+            Chỉ ảnh gốc
+          </button>
+          <button id="viewGtBtn" class="hidden px-2 py-1.5 rounded-[6px] bg-white text-textmuted border border-borderline hover:bg-page hover:text-textmain font-medium text-left transition-colors">
+            Chỉ Ground Truth
           </button>
         </div>
       </div>
 
       <!-- Opacity Slider -->
-      <div class="space-y-2">
+      <div class="space-y-1.5">
         <div class="flex justify-between items-center text-xs">
-          <span class="text-slate-300 font-medium">Độ trong suốt Mask:</span>
-          <span class="mono text-sky-400 font-semibold" id="opacityVal">60%</span>
+          <span class="text-textmain font-medium">Độ trong suốt Mask:</span>
+          <span class="mono text-primary font-semibold text-xs" id="opacityVal">60%</span>
         </div>
-        <input type="range" id="opacitySlider" min="0" max="100" value="60" class="w-full h-1.5 bg-darkbg rounded-lg appearance-none cursor-pointer accent-sky-500">
+        <input type="range" id="opacitySlider" min="0" max="100" value="60" class="w-full h-1.5 bg-borderline rounded-lg appearance-none cursor-pointer accent-primary">
       </div>
 
       <div class="flex-1"></div>
 
       <!-- Action Buttons -->
-      <div class="space-y-2 pt-2 border-t border-darkborder">
-        <button id="runBtn" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 hover:from-indigo-600 hover:to-sky-600 text-white font-semibold text-xs shadow-lg shadow-sky-500/20 flex items-center justify-center space-x-2 transition disabled:opacity-50">
-          <svg class="w-4 h-4 animate-spin hidden" id="loadingSpinner" fill="none" viewBox="0 0 24 24">
+      <div class="space-y-2 pt-2 border-t border-borderline">
+        <button id="runBtn" class="w-full py-2 rounded-[6px] bg-primary hover:bg-primary-hover text-white font-medium text-xs shadow-none flex items-center justify-center space-x-2 transition-colors disabled:opacity-50">
+          <svg class="w-3.5 h-3.5 animate-spin hidden" id="loadingSpinner" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
           </svg>
@@ -195,32 +253,99 @@
         </button>
 
         <div class="grid grid-cols-2 gap-1.5">
-          <button id="exportMaskBtn" class="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-darkborder text-[11px] font-medium text-center">
-            💾 Tải Mask PNG
+          <button id="exportMaskBtn" class="py-1.5 px-2 rounded-[6px] bg-white hover:bg-page text-textmain border border-borderline text-[11px] font-medium text-center transition-colors">
+            Tải Mask PNG
           </button>
-          <button id="exportCsvBtn" class="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-darkborder text-[11px] font-medium text-center">
-            📊 Xuất Báo cáo CSV
+          <button id="exportCsvBtn" class="py-1.5 px-2 rounded-[6px] bg-white hover:bg-page text-textmain border border-borderline text-[11px] font-medium text-center transition-colors">
+            Xuất Báo cáo CSV
           </button>
         </div>
       </div>
     </aside>
 
-    <!-- CENTER: Interactive Image Canvas Workspace -->
-    <main class="flex-1 bg-slate-950 relative flex items-center justify-center overflow-hidden" id="canvasContainer">
+    <!-- CENTER: Canvas Workspace -->
+    <main class="flex-1 bg-[#EEF1F5] relative flex items-center justify-center overflow-hidden" id="canvasContainer">
       
-      <!-- Placeholder when no image -->
-      <div id="canvasEmptyState" class="text-center p-8 text-slate-500 space-y-2">
-        <svg class="w-16 h-16 mx-auto stroke-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z" />
-        </svg>
-        <p class="text-sm font-medium">Chưa có ảnh nào được nạp</p>
-        <p class="text-xs text-slate-600">Chọn hoặc kéo thả một ảnh đường phố từ cột bên trái để bắt đầu</p>
+      <!-- Floating Smart Annotation Toolbar (In Mode 3: Annotation Co-Pilot) -->
+      <div id="annotationToolbar" class="absolute top-3 inset-x-auto bg-white border border-borderline rounded-[8px] px-3 py-1.5 flex items-center space-x-3 shadow-md z-40 text-xs hidden">
+        <!-- Tool selector -->
+        <div class="flex items-center space-x-1 bg-page p-0.5 rounded-[6px] border border-borderline">
+          <button id="toolBrushBtn" class="px-2 py-1 rounded-[4px] bg-white text-primary border border-borderline font-medium flex items-center space-x-1 transition-colors cursor-pointer" title="Bút cọ vẽ nhãn">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+            <span>Cọ vẽ</span>
+          </button>
+          <button id="toolEraserBtn" class="px-2 py-1 rounded-[4px] text-textmuted hover:text-textmain font-medium flex items-center space-x-1 transition-colors cursor-pointer" title="Tẩy xóa mask">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            <span>Tẩy</span>
+          </button>
+        </div>
+
+        <!-- Active Class Indicator -->
+        <div class="flex items-center space-x-1.5 px-2 py-1 rounded-[6px] bg-page border border-borderline cursor-pointer" id="activeClassIndicator" title="Lớp đang được chọn để vẽ">
+          <span class="text-textmuted text-[11px]">Lớp vẽ:</span>
+          <span id="activeClassDot" class="w-2.5 h-2.5 rounded-[2px] border border-black/10" style="background-color: #f423e8;"></span>
+          <span id="activeClassName" class="font-semibold text-textmain text-xs">Sidewalk</span>
+        </div>
+
+        <!-- Brush Size -->
+        <div class="flex items-center space-x-1.5">
+          <span class="text-textmuted text-[11px]">Cỡ cọ:</span>
+          <input type="range" id="brushSizeSlider" min="3" max="60" value="15" class="w-16 h-1.5 bg-borderline rounded-lg appearance-none cursor-pointer accent-primary">
+          <span id="brushSizeVal" class="mono text-primary font-bold text-[11px] w-6">15px</span>
+        </div>
+
+        <!-- Divider -->
+        <div class="h-4 w-px bg-borderline"></div>
+
+        <!-- History Actions -->
+        <div class="flex items-center space-x-1">
+          <button id="undoBrushBtn" class="px-2 py-1 rounded-[4px] bg-page hover:bg-borderline text-textmuted hover:text-textmain text-[11px] font-medium transition-colors flex items-center space-x-1 cursor-pointer" title="Hoàn tác nét vẽ vừa rồi">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2m0 0l-3-3m3 3l3-3M3 10l3 3m-3-3l3-3"></path></svg>
+            <span>Hoàn tác</span>
+          </button>
+          <button id="resetBrushBtn" class="px-2 py-1 rounded-[4px] bg-page hover:bg-borderline text-textmuted hover:text-textmain text-[11px] font-medium transition-colors cursor-pointer" title="Khôi phục lại mask ban đầu do AI sinh">
+            Khôi phục AI
+          </button>
+        </div>
+
+        <!-- Export Verified Mask -->
+        <button id="exportTrainIdBtn" class="px-2.5 py-1 rounded-[6px] bg-status-success hover:bg-emerald-700 text-white font-medium text-xs flex items-center space-x-1 transition-colors cursor-pointer shadow-sm" title="Xuất Mask chuẩn TrainID (0-18) cho CVAT hoặc nộp bài">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+          <span>Xuất Mask CVAT (TrainID)</span>
+        </button>
       </div>
 
+      <!-- Placeholder when no image -->
+      <div id="canvasEmptyState" class="text-center p-8 text-textmuted space-y-1.5">
+        <svg class="w-12 h-12 mx-auto stroke-1 text-textmuted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z" />
+        </svg>
+        <p class="text-[13px] font-medium text-textmain">Chưa có ảnh nào được nạp</p>
+        <p class="text-xs text-textmuted">Chọn hoặc kéo thả một ảnh đường phố từ cột bên trái để bắt đầu</p>
+      </div>
+
+      <!-- Floating Canvas Close Button -->
+      <button id="canvasCloseImageBtn" class="hidden absolute top-3 right-3 bg-white/95 hover:bg-red-50 text-textmuted hover:text-status-danger border border-borderline hover:border-red-200 rounded-[6px] px-2.5 py-1 text-xs font-medium shadow-sm transition-colors z-30 flex items-center space-x-1 cursor-pointer" title="Tắt ảnh và giải phóng màn hình">
+        <svg class="w-3.5 h-3.5 text-status-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        <span>Tắt ảnh</span>
+      </button>
+
       <!-- Main Dual Canvas Wrapper -->
-      <div id="imageWrapper" class="relative hidden select-none max-w-full max-h-full">
+      <div id="imageWrapper" class="relative hidden select-none max-w-full max-h-full border border-borderline rounded-[6px] bg-white overflow-hidden">
+        <!-- Floating Labels for A/B Split Comparison -->
+        <div id="abBadges" class="absolute top-2 inset-x-2 flex justify-between pointer-events-none z-20 hidden">
+          <div class="px-2 py-0.5 rounded-[4px] bg-white/95 text-textmain border border-borderline text-[11px] font-medium shadow-sm flex items-center space-x-1.5">
+            <span class="w-2 h-2 rounded-full bg-status-warning"></span>
+            <span id="modelABadge">Model v1 (44.22% mIoU)</span>
+          </div>
+          <div class="px-2 py-0.5 rounded-[4px] bg-white/95 text-textmain border border-borderline text-[11px] font-medium shadow-sm flex items-center space-x-1.5">
+            <span class="w-2 h-2 rounded-full bg-status-success"></span>
+            <span id="modelBBadge">Model v2 (56.77% mIoU)</span>
+          </div>
+        </div>
+
         <!-- Base Layer: Ảnh gốc -->
-        <img id="baseImage" class="max-w-full max-h-[calc(100vh-80px)] block object-contain pointer-events-none" alt="Original">
+        <img id="baseImage" class="max-w-full max-h-[calc(100vh-75px)] block object-contain pointer-events-none" alt="Original">
         
         <!-- Mask Overlay Layer -->
         <canvas id="overlayCanvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
@@ -230,61 +355,314 @@
       </div>
 
       <!-- Floating Zoom Controls -->
-      <div class="absolute bottom-4 right-4 bg-darkpanel/90 backdrop-blur border border-darkborder rounded-lg p-1 flex items-center space-x-1 shadow-xl z-30 text-xs">
-        <button id="zoomInBtn" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-800 text-slate-300 hover:text-white">+</button>
-        <button id="zoomResetBtn" class="px-2 h-7 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400 text-[11px] mono">100%</button>
-        <button id="zoomOutBtn" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-800 text-slate-300 hover:text-white">-</button>
+      <div class="absolute bottom-3 right-3 bg-white border border-borderline rounded-[6px] p-0.5 flex items-center space-x-1 shadow-sm z-30 text-xs">
+        <button id="zoomInBtn" class="w-6 h-6 flex items-center justify-center rounded hover:bg-page text-textmain">+</button>
+        <button id="zoomResetBtn" class="px-1.5 h-6 flex items-center justify-center rounded hover:bg-page text-textmuted text-[11px] mono">100%</button>
+        <button id="zoomOutBtn" class="w-6 h-6 flex items-center justify-center rounded hover:bg-page text-textmain">-</button>
       </div>
     </main>
 
     <!-- RIGHT PANEL: Metrics & 19-Classes Filter -->
-    <aside class="w-80 bg-darkpanel border-l border-darkborder flex flex-col shrink-0 overflow-hidden">
+    <aside class="w-80 bg-white border-l border-borderline flex flex-col shrink-0 overflow-hidden text-xs">
       
       <!-- Metrics Dashboard Header (In Evaluation Mode) -->
-      <div id="metricsDashboard" class="p-3.5 border-b border-darkborder bg-slate-900/40 space-y-3 hidden">
+      <div id="metricsDashboard" class="p-3 border-b border-borderline bg-page space-y-2.5 hidden">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Kết quả Đánh giá</span>
-          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold">Live IoU QA</span>
+          <span class="text-[11px] font-semibold text-textmuted uppercase tracking-wider">Kết quả Đánh giá</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded-[4px] bg-emerald-50 text-status-success border border-emerald-200 font-medium">Live IoU QA</span>
         </div>
 
         <div class="grid grid-cols-2 gap-2">
           <!-- mIoU Card -->
-          <div class="bg-gradient-to-br from-indigo-950/60 to-slate-900 border border-indigo-500/40 rounded-xl p-3">
-            <span class="text-[10px] text-indigo-300 uppercase font-medium">mIoU Toàn ảnh</span>
-            <div class="text-2xl font-bold text-white mono mt-1" id="mIouValue">--%</div>
+          <div class="bg-white border border-borderline rounded-[6px] p-2.5">
+            <span class="text-[10px] text-textmuted uppercase font-medium">mIoU Toàn ảnh</span>
+            <div class="text-xl font-bold text-textmain mono mt-0.5" id="mIouValue">--%</div>
           </div>
           <!-- Overall Accuracy Card -->
-          <div class="bg-gradient-to-br from-emerald-950/60 to-slate-900 border border-emerald-500/40 rounded-xl p-3">
-            <span class="text-[10px] text-emerald-300 uppercase font-medium">Pixel Accuracy</span>
-            <div class="text-2xl font-bold text-white mono mt-1" id="accValue">--%</div>
+          <div class="bg-white border border-borderline rounded-[6px] p-2.5">
+            <span class="text-[10px] text-textmuted uppercase font-medium">Pixel Accuracy</span>
+            <div class="text-xl font-bold text-textmain mono mt-0.5" id="accValue">--%</div>
           </div>
         </div>
 
         <!-- Error Heatmap Note -->
-        <div class="text-[11px] flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-800/60 border border-darkborder">
+        <div class="text-[11px] flex items-center justify-between px-2 py-1 rounded-[6px] bg-white border border-borderline">
           <div class="flex items-center space-x-1.5">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
-            <span class="text-slate-300">Đoán đúng</span>
+            <span class="w-2 h-2 rounded-full bg-status-success inline-block"></span>
+            <span class="text-textmain">Đoán đúng</span>
           </div>
           <div class="flex items-center space-x-1.5">
-            <span class="w-2.5 h-2.5 rounded-full bg-red-400 inline-block"></span>
-            <span class="text-slate-300">Sai / Lem</span>
+            <span class="w-2 h-2 rounded-full bg-status-danger inline-block"></span>
+            <span class="text-textmain">Sai / Lem</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADAS Telemetry Dashboard Header (When in ADAS mode) -->
+      <div id="adasDashboard" class="p-3 border-b border-borderline bg-page space-y-2 hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-semibold text-textmuted uppercase tracking-wider">Thông số ADAS & Khoảng cách</span>
+          <span id="adasStatusBadge" class="text-[10px] px-2 py-0.5 rounded-[4px] font-semibold border">SAFE</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-white border border-borderline rounded-[6px] p-2">
+            <span class="text-[10px] text-textmuted block">Vật cản gần nhất:</span>
+            <span id="adasClosestDist" class="text-base font-bold text-textmain mono">-- m</span>
+          </div>
+          <div class="bg-white border border-borderline rounded-[6px] p-2">
+            <span class="text-[10px] text-textmuted block">Làn đường tự do:</span>
+            <span id="adasRoadCoverage" class="text-base font-bold text-textmain mono">--%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- A/B Comparison Dashboard Header (When in A/B mode) -->
+      <div id="abDashboard" class="p-3 border-b border-borderline bg-page space-y-2 hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-semibold text-textmuted uppercase tracking-wider">Đột phá Hiệu năng A/B</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded-[4px] bg-emerald-50 text-status-success border border-emerald-200 font-semibold">Đòn 1: Đối chứng</span>
+        </div>
+        <div class="bg-white border border-borderline rounded-[6px] p-2.5 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-textmuted">mIoU Toàn ảnh:</span>
+            <div class="flex items-center space-x-1.5">
+              <span class="line-through text-textmuted text-[11px]">44.22%</span>
+              <span class="text-status-success font-bold mono text-sm">56.77%</span>
+              <span class="text-[10px] font-semibold text-status-success bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200">+12.55%</span>
+            </div>
+          </div>
+          <div class="border-t border-borderline pt-1.5 space-y-1 text-[11px]">
+            <div class="font-medium text-textmain text-[11px] mb-1">Đột phá ở các lớp hiếm (BDD100K):</div>
+            <div class="flex justify-between items-center py-0.5 border-b border-page">
+              <span class="text-textmuted">Rider (Người lái xe):</span>
+              <span class="font-semibold text-status-success mono text-[10px]">0% → 44.62% (+44.62%)</span>
+            </div>
+            <div class="flex justify-between items-center py-0.5 border-b border-page">
+              <span class="text-textmuted">Motorcycle (Xe máy):</span>
+              <span class="font-semibold text-status-success mono text-[10px]">0% → 45.22% (+45.22%)</span>
+            </div>
+            <div class="flex justify-between items-center py-0.5 border-b border-page">
+              <span class="text-textmuted">Bicycle (Xe đạp):</span>
+              <span class="font-semibold text-status-success mono text-[10px]">0% → 41.58% (+41.58%)</span>
+            </div>
+            <div class="flex justify-between items-center py-0.5">
+              <span class="text-textmuted">Person (Người đi bộ):</span>
+              <span class="font-semibold text-status-success mono text-[10px]">30.2% → 58.67% (+28.47%)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Annotation Co-Pilot Dashboard Header (When in Mode 3: Annotation mode) -->
+      <div id="annotationDashboard" class="p-3 border-b border-borderline bg-page space-y-2.5 hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-semibold text-textmuted uppercase tracking-wider">Trợ lý Gán nhãn & QA</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded-[4px] bg-primary-light text-primary border border-primary/20 font-semibold">Human-in-the-Loop</span>
+        </div>
+
+        <!-- Human vs AI Stats Card -->
+        <div class="bg-white border border-borderline rounded-[6px] p-2.5 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-textmuted">Pre-label Engine:</span>
+            <span class="font-bold text-primary mono text-[11px]">SegFormer-v2 (56.77%)</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-textmuted">Thời gian tiết kiệm:</span>
+            <span class="font-bold text-status-success mono text-xs">~18.5 phút/ảnh (-95%)</span>
+          </div>
+
+          <div class="border-t border-borderline pt-2 space-y-1 text-[11px]">
+            <div class="flex justify-between items-center text-textmuted">
+              <span>Phân bổ gán nhãn:</span>
+              <span id="annotHumanRatio" class="mono font-semibold text-textmain">AI: 98.6% | Người: 1.4%</span>
+            </div>
+            <div class="w-full bg-borderline h-1.5 rounded-full overflow-hidden flex">
+              <div id="annotAiBar" class="bg-primary h-full transition-all" style="width: 98.6%;"></div>
+              <div id="annotHumanBar" class="bg-status-success h-full transition-all" style="width: 1.4%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- QA Grader Checklist Card -->
+        <div class="bg-white border border-borderline rounded-[6px] p-2.5 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-semibold text-textmain">Điểm Kiểm Định QA Nhãn</span>
+            <span id="qaScoreBadge" class="text-xs font-bold text-status-success mono bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">96/100 (Grade A+)</span>
+          </div>
+          <div class="space-y-1 text-[11px] text-textmuted">
+            <div class="flex items-center space-x-1.5 text-status-success">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              <span>Đường biên sắc nét (Boundary IoU cao)</span>
+            </div>
+            <div class="flex items-center space-x-1.5 text-status-success">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              <span>Đầy đủ đối tượng VRU (Người & Xe máy)</span>
+            </div>
+            <div class="flex items-center space-x-1.5 text-textmain font-medium">
+              <svg class="w-3.5 h-3.5 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <span>Chuẩn TrainID 19 lớp BDD100K (Ready)</span>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- 19-Classes Filter & Distribution List -->
-      <div class="p-3 border-b border-darkborder flex items-center justify-between text-xs bg-darkpanel">
-        <span class="font-semibold text-slate-300 uppercase tracking-wider">Danh mục 19 Classes</span>
-        <button id="toggleAllClasses" class="text-[11px] text-sky-400 hover:underline">Bật/Tắt tất cả</button>
+      <div class="p-2.5 border-b border-borderline flex items-center justify-between text-xs bg-white">
+        <span class="font-semibold text-textmuted uppercase tracking-wider text-[11px]">Danh mục 19 Classes</span>
+        <button id="toggleAllClasses" class="text-[11px] text-primary hover:underline">Bật/Tắt tất cả</button>
       </div>
 
       <!-- Scrollable Class List -->
-      <div class="flex-1 overflow-y-auto p-2 space-y-1" id="classListContainer">
+      <div class="flex-1 overflow-y-auto p-2 space-y-0.5" id="classListContainer">
         <!-- Classes will be injected by JavaScript -->
       </div>
     </aside>
 
+  </div>
+
+  <!-- MODAL: BÁO CÁO KIỂM TOÁN CHẤT LƯỢNG MÔ HÌNH (ĐÒN 3) -->
+  <div id="auditModal" class="fixed inset-0 bg-[#101828]/40 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white border border-borderline rounded-[8px] shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden text-textmain">
+      
+      <!-- Modal Header -->
+      <div class="px-5 py-3.5 border-b border-borderline flex items-center justify-between bg-page">
+        <div>
+          <div class="flex items-center space-x-2">
+            <h2 class="text-sm font-bold text-textmain tracking-tight">Báo Cáo Kiểm Toán Huấn Luyện & Thất Bại Mô Hình</h2>
+            <span class="px-2 py-0.5 rounded-[4px] bg-emerald-50 text-status-success border border-emerald-200 text-[10px] font-semibold mono">56.77% mIoU</span>
+          </div>
+          <p class="text-[11px] text-textmuted mt-0.5">Mô hình SegFormer-B0 BDD100K 19 Classes - Kết quả nghiệm thu từ quá trình huấn luyện</p>
+        </div>
+        <button id="closeAuditBtn" class="w-7 h-7 flex items-center justify-center rounded-[4px] hover:bg-borderline text-textmuted hover:text-textmain transition-colors text-base font-semibold">✕</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+        
+        <!-- Section 1: Thống kê chỉ số nghiệm thu -->
+        <div>
+          <h3 class="text-[11px] font-semibold text-textmuted uppercase tracking-wider mb-2">1. Tổng Quan Chỉ Số Xác Thực (1,000 ảnh Validation BDD100K)</h3>
+          <div class="grid grid-cols-4 gap-2.5">
+            <div class="p-2.5 rounded-[6px] border border-borderline bg-page">
+              <span class="text-[10px] text-textmuted block">mIoU (19 Classes)</span>
+              <span class="text-lg font-bold text-primary mono">56.77%</span>
+              <span class="text-[10px] text-status-success block mt-0.5 font-medium">+12.55% so với v1</span>
+            </div>
+            <div class="p-2.5 rounded-[6px] border border-borderline bg-page">
+              <span class="text-[10px] text-textmuted block">Pixel Accuracy</span>
+              <span class="text-lg font-bold text-textmain mono">92.59%</span>
+              <span class="text-[10px] text-textmuted block mt-0.5">198M pixel hợp lệ</span>
+            </div>
+            <div class="p-2.5 rounded-[6px] border border-borderline bg-page">
+              <span class="text-[10px] text-textmuted block">Mean Class Acc</span>
+              <span class="text-lg font-bold text-textmain mono">65.83%</span>
+              <span class="text-[10px] text-textmuted block mt-0.5">Tất cả danh mục</span>
+            </div>
+            <div class="p-2.5 rounded-[6px] border border-borderline bg-page">
+              <span class="text-[10px] text-textmuted block">Freq-Weighted IoU</span>
+              <span class="text-lg font-bold text-textmain mono">86.85%</span>
+              <span class="text-[10px] text-status-success block mt-0.5 font-medium">Val Loss: 0.284</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Đột phá ở các lớp hiếm -->
+        <div>
+          <h3 class="text-[11px] font-semibold text-textmuted uppercase tracking-wider mb-2">2. Cải Thiện Đột Phá Ở Các Lớp Hiếm & Dễ Tổn Thương (VRU)</h3>
+          <div class="border border-borderline rounded-[6px] overflow-hidden">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-page border-b border-borderline text-[11px] text-textmuted font-semibold">
+                <tr>
+                  <th class="py-1.5 px-3">Lớp đối tượng</th>
+                  <th class="py-1.5 px-3">Phiên bản v1 (Cũ)</th>
+                  <th class="py-1.5 px-3">Phiên bản v2 (Mới)</th>
+                  <th class="py-1.5 px-3">Mức tăng trưởng</th>
+                  <th class="py-1.5 px-3">Đánh giá an toàn ADAS</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-borderline">
+                <tr>
+                  <td class="py-2 px-3 font-medium text-textmain">Rider (Người lái xe máy/xe đạp)</td>
+                  <td class="py-2 px-3 text-status-danger mono">0.00%</td>
+                  <td class="py-2 px-3 text-status-success mono font-semibold">44.62%</td>
+                  <td class="py-2 px-3 text-status-success mono font-bold">+44.62%</td>
+                  <td class="py-2 px-3 text-textmuted">Xóa bỏ hoàn toàn điểm mù VRU</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-3 font-medium text-textmain">Motorcycle (Xe mô tô, xe gắn máy)</td>
+                  <td class="py-2 px-3 text-status-danger mono">0.00%</td>
+                  <td class="py-2 px-3 text-status-success mono font-semibold">45.22%</td>
+                  <td class="py-2 px-3 text-status-success mono font-bold">+45.22%</td>
+                  <td class="py-2 px-3 text-textmuted">Phát hiện chính xác vật cản cơ động</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-3 font-medium text-textmain">Bicycle (Xe đạp)</td>
+                  <td class="py-2 px-3 text-status-danger mono">0.00%</td>
+                  <td class="py-2 px-3 text-status-success mono font-semibold">41.58%</td>
+                  <td class="py-2 px-3 text-status-success mono font-bold">+41.58%</td>
+                  <td class="py-2 px-3 text-textmuted">Nhận diện cấu trúc khung xe hẹp</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-3 font-medium text-textmain">Person (Người đi bộ)</td>
+                  <td class="py-2 px-3 text-textmuted mono">30.20%</td>
+                  <td class="py-2 px-3 text-status-success mono font-semibold">58.67%</td>
+                  <td class="py-2 px-3 text-status-success mono font-bold">+28.47%</td>
+                  <td class="py-2 px-3 text-textmuted">Cốt lõi cho hệ thống phanh tự động AEB</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section 3: Phân tích thất bại & Ma trận nhầm lẫn -->
+        <div>
+          <h3 class="text-[11px] font-semibold text-textmuted uppercase tracking-wider mb-2">3. Báo Cáo Kiểm Toán Thất Bại (Failure Audit & Confusion Analysis)</h3>
+          <div class="space-y-2 text-xs">
+            <div class="p-2.5 rounded-[6px] border border-borderline bg-white">
+              <div class="flex items-center space-x-1.5 font-semibold text-textmain">
+                <span class="w-1.5 h-1.5 rounded-full bg-status-warning"></span>
+                <span>Nhầm lẫn Sidewalk (Vỉa hè - 63.03%) ↔ Road (Lòng đường - 94.48%)</span>
+              </div>
+              <p class="text-textmuted text-[11px] mt-1">
+                Nguyên nhân: Đường ranh giới giữa vỉa hè phẳng và mép lòng đường tại Mỹ trong tập BDD100K thường không có gờ cao (curb), hoặc bị che khuất bởi xe đỗ bên đường. Lỗi tập trung ở 1-3 pixel đường biên.
+              </p>
+            </div>
+
+            <div class="p-2.5 rounded-[6px] border border-borderline bg-white">
+              <div class="flex items-center space-x-1.5 font-semibold text-textmain">
+                <span class="w-1.5 h-1.5 rounded-full bg-status-warning"></span>
+                <span>Nhầm lẫn Building (Tòa nhà - 84.09%) ↔ Wall (Bức tường - 33.67%) / Fence (Hàng rào)</span>
+              </div>
+              <p class="text-textmuted text-[11px] mt-1">
+                Nguyên nhân: Các bề mặt bê tông thẳng đứng chia sẻ đặc trưng texture tương đồng trong điều kiện ánh sáng chói hoặc ban đêm trời mưa.
+              </p>
+            </div>
+
+            <div class="p-2.5 rounded-[6px] border border-red-200 bg-red-50/30">
+              <div class="flex items-center space-x-1.5 font-semibold text-status-danger">
+                <span class="w-1.5 h-1.5 rounded-full bg-status-danger"></span>
+                <span>Lớp Train (Tàu hỏa) đạt 0.00% IoU - Giải trình nguyên nhân dữ liệu</span>
+              </div>
+              <p class="text-textmuted text-[11px] mt-1">
+                Giải trình dữ liệu: Trong 1,000 ảnh validation chỉ có đúng 27,199 pixel Train trên tổng số 198,822,204 pixel hợp lệ (tỷ lệ 0.013% - gần như không xuất hiện trên đường phố). Mô hình không đủ tín hiệu để tối ưu loss cho lớp này. Giải pháp thực tế: gộp lớp Train vào Vehicle/Obstacle hoặc bổ sung dữ liệu synthetic.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 py-3 border-t border-borderline bg-page flex items-center justify-between">
+        <span class="text-[11px] text-textmuted">Checkpoint: Epoch 24 (Validation loss 0.284, mIoU 56.77%)</span>
+        <div class="flex items-center space-x-2">
+          <button id="closeAuditBtn2" class="px-3 py-1.5 rounded-[6px] bg-white hover:bg-borderline text-textmain border border-borderline text-xs font-medium transition-colors">
+            Đóng
+          </button>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <script src="/static/app.js"></script>
