@@ -6,22 +6,33 @@
 
 ## 🌟 Tính Năng Nổi Bật
 
-1. **AI Model Fine-tuned (SegFormer-B0):**
-   - Huấn luyện trực tiếp trên tập BDD100K (19 nhãn chuẩn xe tự hành).
-   - Suy luận nhanh (~300 - 800ms trên CPU, < 50ms trên GPU).
-   - Đạt mIoU **44.22%** (Mặt đường Road: 93.13%, Bầu trời Sky: 94.91%, Xe hơi Car: 85.32%, Cây cối Vegetation: 83.43%, Tòa nhà Building: 81.01%).
+1. **AI Model Fine-tuned Đỉnh Cao (SegFormer-B0 v2):**
+   - Huấn luyện trực tiếp trên tập dữ liệu xe tự hành **BDD100K** (19 nhãn chuẩn).
+   - Đạt mIoU vượt trội **56.77%** (V2 Final Checkpoint), so tài A/B trực tiếp với bản v1 (44.22%) và baseline Cityscapes.
+   - Suy luận mượt mà trên cả CPU và GPU với tensor nội suy bilinear float32 độ nét cao (1280x720).
 
-2. **Chế độ 1: Dự đoán & Phân tích Tương tác (Inference Mode):**
+2. **Soi Lớp Trực Quan (Live Class Mask Hover Inspector):**
+   - Rà chuột trực tiếp lên bất kỳ vị trí nào trên ảnh mask để hiển thị ngay tooltip thông minh: Icon, Tên Tiếng Anh, Tên Tiếng Việt (*Ô tô con, Mặt đường, Vỉa hè, Tòa nhà, Cây cối, Người đi bộ...*), Mã ID lớp và Tọa độ pixel (X, Y).
+   - Tự động highlight dòng tương ứng ở thanh danh mục 19 lớp bên phải giúp phân biệt các lớp có tông màu tương tự nhau.
+   - Bảng HUD Inspector tiện lợi cố định tại góc dưới màn hình làm việc.
+
+3. **Chế độ 1: Dự đoán & Phân tích Tương tác (Inference Mode):**
    - Thanh trượt so sánh **Split Curtain Slider** đối chiếu trực tiếp giữa ảnh thực tế và mask AI.
-   - Bảng lọc **19 Classes** bật/tắt linh hoạt từng lớp vật thể.
-   - Tính toán phân bố diện tích pixel (% diện tích mặt đường, xe cộ, tòa nhà...).
+   - Đối chứng A/B **Model Comparison** chia màn hình trực quan giữa 2 phiên bản mô hình.
+   - Hiển thị viễn trắc **ADAS Telemetry & Phân tích Hành lang An toàn**.
+   - Bảng lọc **19 Classes** bật/tắt linh hoạt từng lớp vật thể và tính toán phân bố diện tích pixel.
 
-3. **Chế độ 2: Kiểm duyệt & Đo lường Chất lượng (QA Benchmark Mode):**
+4. **Chế độ 2: Kiểm duyệt & Đo lường Chất lượng (QA Benchmark Mode):**
    - Nạp ảnh nhãn thật (**Ground Truth Mask**) để chấm điểm **mIoU** và **per-class IoU** tức thì.
    - Sinh **Bản đồ lỗi (Visual Error Map)**: Vùng xanh lá (Dự đoán đúng), Vùng đỏ (Dự đoán sai).
    - Xuất báo cáo kết quả đánh giá ra file **CSV** và tải file mask chuẩn BDD100K **PNG**.
+   - Báo cáo kiểm toán mô hình chi tiết với biểu đồ radar, ma trận nhầm lẫn và khuyến nghị kỹ thuật.
 
-4. **Tích hợp sẵn 100 Bộ Ảnh Mẫu Kiểm Thử (1-Click Test):**
+5. **Chế độ 3: Gán nhãn AI & Sửa cọ Tương tác (Co-Pilot Annotation):**
+   - Chỉnh sửa, tinh chỉnh mask bằng bút cọ thông minh (Smart Brush / Eraser) theo cơ chế Human-in-the-loop.
+   - Hỗ trợ hoàn tác (Undo), đổi kích thước cọ và xuất mask huấn luyện TrainId.
+
+6. **Tích hợp sẵn 100 Bộ Ảnh Mẫu Kiểm Thử (1-Click Test):**
    - Click chọn bất kỳ ảnh nào trong khay mẫu để nạp tự động cả ảnh gốc lẫn nhãn chuẩn.
 
 ---

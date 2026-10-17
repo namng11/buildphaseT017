@@ -77,8 +77,11 @@
       border: 1.5px solid var(--primary);
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 600;
-      box-shadow: 0 1px 3px rgba(16, 24, 40, 0.1);
+    /* Hiệu ứng highlight khi hover vào mask */
+    .class-item-hovered {
+      background-color: rgba(37, 99, 235, 0.12) !important;
+      border-color: #2563eb !important;
+      box-shadow: 0 0 0 1.5px #2563eb !important;
     }
   </style>
 </head>
@@ -352,6 +355,14 @@
 
         <!-- Split Slider Handle -->
         <div id="splitHandle" class="slider-handle hidden"></div>
+      </div>
+
+      <!-- Bottom-Left Live Pixel Inspector Badge -->
+      <div id="canvasPixelInspector" class="absolute bottom-3 left-3 bg-white/95 backdrop-blur-sm border border-borderline rounded-[6px] px-2.5 py-1 text-xs shadow-sm z-30 hidden items-center space-x-2 select-none">
+        <span class="text-textmuted text-[11px] font-medium">Lớp đang trỏ:</span>
+        <span id="inspectorColorDot" class="w-2.5 h-2.5 rounded-full border border-black/10"></span>
+        <span id="inspectorClassName" class="font-semibold text-textmain">Car (Ô tô con)</span>
+        <span id="inspectorCoords" class="mono text-[10px] text-textmuted bg-page px-1.5 py-0.5 rounded border border-borderline">X: 640 Y: 360</span>
       </div>
 
       <!-- Floating Zoom Controls -->
@@ -662,6 +673,23 @@
         </div>
       </div>
 
+  <!-- Floating Cursor Class Hover Tooltip -->
+  <div id="classHoverTooltip" class="fixed pointer-events-none z-50 hidden transition-opacity duration-75 bg-slate-900/90 backdrop-blur-md text-white rounded-lg p-2.5 shadow-2xl border border-white/15 max-w-xs select-none">
+    <div class="flex items-center space-x-2.5">
+      <span id="tooltipColorDot" class="w-3.5 h-3.5 rounded-full border border-white/40 shadow-sm shrink-0"></span>
+      <div class="leading-tight">
+        <div class="flex items-center space-x-1.5">
+          <span id="tooltipIcon" class="text-sm">🚗</span>
+          <span id="tooltipClassName" class="font-bold text-white text-xs">Car</span>
+          <span id="tooltipClassVi" class="text-white/80 text-[11px] font-medium">(Ô tô con)</span>
+        </div>
+        <div class="text-[10px] text-white/60 flex items-center space-x-2 mt-0.5">
+          <span id="tooltipClassId" class="mono text-emerald-400 font-semibold">ID: 13</span>
+          <span>•</span>
+          <span id="tooltipCoords" class="mono">X: 640, Y: 360</span>
+          <span id="tooltipModelBadge" class="hidden px-1.5 py-0.2 rounded bg-white/15 text-white text-[9px] font-medium"></span>
+        </div>
+      </div>
     </div>
   </div>
 

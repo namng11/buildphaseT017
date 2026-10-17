@@ -176,9 +176,6 @@ async def predict_image(image: UploadFile = File(...)):
     try:
         image_bytes = await image.read()
         pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        # Giữ nguyên độ phân giải chuẩn BDD100K (1280x720) & Full HD, chỉ thumbnail nếu ảnh điện thoại quá lớn (>1920px)
-        if max(pil_image.width, pil_image.height) > 1920:
-            pil_image.thumbnail((1920, 1920), Image.Resampling.BILINEAR)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Không thể đọc file ảnh: {str(e)}")
 
@@ -213,8 +210,6 @@ async def predict_ab_endpoint(image: UploadFile = File(...)):
     try:
         image_bytes = await image.read()
         pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        if max(pil_image.width, pil_image.height) > 1920:
-            pil_image.thumbnail((1920, 1920), Image.Resampling.BILINEAR)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Không thể đọc file ảnh: {str(e)}")
 
@@ -243,8 +238,6 @@ async def evaluate_image(
     try:
         img_bytes = await image.read()
         pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-        if max(pil_img.width, pil_img.height) > 1920:
-            pil_img.thumbnail((1920, 1920), Image.Resampling.BILINEAR)
         
         gt_bytes = await ground_truth.read()
         pil_gt = Image.open(io.BytesIO(gt_bytes))

@@ -132,7 +132,21 @@ const el = {
 
   // Nút Tắt / Đóng ảnh
   closeImageBtn: document.getElementById('closeImageBtn'),
-  canvasCloseImageBtn: document.getElementById('canvasCloseImageBtn')
+  canvasCloseImageBtn: document.getElementById('canvasCloseImageBtn'),
+
+  // Tooltip & HUD kiểm tra class khi hover
+  classHoverTooltip: document.getElementById('classHoverTooltip'),
+  tooltipColorDot: document.getElementById('tooltipColorDot'),
+  tooltipIcon: document.getElementById('tooltipIcon'),
+  tooltipClassName: document.getElementById('tooltipClassName'),
+  tooltipClassVi: document.getElementById('tooltipClassVi'),
+  tooltipClassId: document.getElementById('tooltipClassId'),
+  tooltipCoords: document.getElementById('tooltipCoords'),
+  tooltipModelBadge: document.getElementById('tooltipModelBadge'),
+  canvasPixelInspector: document.getElementById('canvasPixelInspector'),
+  inspectorColorDot: document.getElementById('inspectorColorDot'),
+  inspectorClassName: document.getElementById('inspectorClassName'),
+  inspectorCoords: document.getElementById('inspectorCoords')
 };
 
 // 1. KHỞI TẠO ỨNG DỤNG
@@ -185,6 +199,7 @@ function updateCloseButtonsVisibility(show) {
 }
 
 function resetWorkspaceForNewImage() {
+  hideClassHover();
   // 1. Reset toàn bộ trạng thái vẽ tay (Smart Brush)
   state.undoStack = [];
   state.modifiedPixelsCount = 0;
@@ -315,18 +330,43 @@ async function fetchClasses() {
   }
 }
 
+// BẢNG THÔNG TIN 19 LỚP (TIẾNG VIỆT & BIỂU TƯỢNG TRỰC QUAN)
+const CLASS_INFO = {
+  0: { en: "Road", vi: "Mặt đường", icon: "🛣️" },
+  1: { en: "Sidewalk", vi: "Vỉa hè", icon: "🚏" },
+  2: { en: "Building", vi: "Tòa nhà", icon: "🏢" },
+  3: { en: "Wall", vi: "Bức tường", icon: "🧱" },
+  4: { en: "Fence", vi: "Hàng rào", icon: "🚧" },
+  5: { en: "Pole", vi: "Cột đèn / Cột điện", icon: "💈" },
+  6: { en: "Traffic Light", vi: "Đèn giao thông", icon: "🚦" },
+  7: { en: "Traffic Sign", vi: "Biển báo", icon: "🛑" },
+  8: { en: "Vegetation", vi: "Cây cối / Rừng", icon: "🌳" },
+  9: { en: "Terrain", vi: "Địa hình / Bãi cỏ", icon: "🌾" },
+  10: { en: "Sky", vi: "Bầu trời", icon: "☁️" },
+  11: { en: "Person", vi: "Người đi bộ", icon: "🚶" },
+  12: { en: "Rider", vi: "Người lái xe", icon: "🛵" },
+  13: { en: "Car", vi: "Ô tô con", icon: "🚗" },
+  14: { en: "Truck", vi: "Xe tải", icon: "🚛" },
+  15: { en: "Bus", vi: "Xe buýt", icon: "🚌" },
+  16: { en: "Train", vi: "Tàu hỏa", icon: "🚆" },
+  17: { en: "Motorcycle", vi: "Xe máy", icon: "🏍️" },
+  18: { en: "Bicycle", vi: "Xe đạp", icon: "🚴" }
+};
+
 // 2. RENDER DANH MỤC 19 CLASSES
 function renderClassList() {
   el.classListContainer.innerHTML = '';
   
   state.classes.forEach(c => {
+    const meta = CLASS_INFO[c.id] || { en: c.name, vi: c.name, icon: "🏷️" };
     const isBrushActive = (state.mode === 'annotate' && state.activeBrushClassId === c.id);
     const item = document.createElement('div');
     const activeBorderClass = isBrushActive 
       ? 'bg-primary-light border-primary text-primary font-semibold ring-1 ring-primary/30' 
       : 'hover:bg-page border-transparent hover:border-borderline text-textmain';
-    item.className = `flex items-center justify-between p-1.5 rounded-[4px] border text-xs transition-colors cursor-pointer select-none ${activeBorderClass}`;
+    item.className = `flex items-center justify-between p-1.5 rounded-[4px] border text-xs transition-all cursor-pointer select-none ${activeBorderClass}`;
     item.dataset.classId = c.id;
+    item.id = `classItem_${c.id}`;
 
     // Check xem có số liệu thống kê hoặc IoU chưa
     let statBadge = '';
@@ -354,8 +394,11 @@ function renderClassList() {
     item.innerHTML = `
       <div class="flex items-center space-x-2">
         <input type="checkbox" ${isActive ? 'checked' : ''} class="w-3.5 h-3.5 rounded-[3px] border-borderline text-primary focus:ring-0 cursor-pointer">
-        <span class="w-2.5 h-2.5 rounded-[2px] shrink-0 border border-black/10" style="background-color: ${c.hex}"></span>
-        <span class="font-medium capitalize ${!isActive ? 'opacity-40 line-through' : ''}">${c.name}</span>
+        <span class="w-2.5 h-2.5 rounded-[2px] shrink-0 border border-black/10 shadow-sm" style="background-color: ${c.hex}"></span>
+        <span class="font-medium capitalize ${!isActive ? 'opacity-40 line-through' : ''}">
+          <span class="mr-1">${meta.icon}</span>${c.name} 
+          <span class="text-[10px] text-textmuted font-normal lowercase">(${meta.vi})</span>
+        </span>
       </div>
       <div>${statBadge}</div>
     `;
@@ -377,6 +420,194 @@ function renderClassList() {
 
     el.classListContainer.appendChild(item);
   });
+}
+
+// BỘ ĐỆM OFFSCREEN CANVAS VÀ HÀM NHẬN DIỆN LỚP KHI HOVER
+const offscreenCanvases = {
+  mask: document.createElement('canvas'),
+  maskA: document.createElement('canvas'),
+  maskB: document.createElement('canvas'),
+  gt: document.createElement('canvas')
+};
+
+function getOffscreenContext(key, img) {
+  if (!img || !img.complete || img.naturalWidth === 0) return null;
+  const c = offscreenCanvases[key];
+  if (c.width !== img.naturalWidth || c.height !== img.naturalHeight || c._src !== img.src) {
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    c._src = img.src;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0);
+  }
+  return c.getContext('2d', { willReadFrequently: true });
+}
+
+function findClassFromColor(r, g, b, a) {
+  if (a < 10) return null; // Pixel trong suốt không có mask
+  if (r === 0 && g === 0 && b === 0 && a === 0) return null;
+
+  let minDiff = Infinity;
+  let bestId = -1;
+
+  for (let i = 0; i < state.classes.length; i++) {
+    const cls = state.classes[i];
+    const [cr, cg, cb] = cls.rgb;
+    const diff = (r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2;
+    if (diff < minDiff) {
+      minDiff = diff;
+      bestId = cls.id;
+    }
+  }
+
+  if (bestId !== -1 && minDiff < 4000) {
+    const meta = CLASS_INFO[bestId] || { en: state.classes[bestId].name, vi: state.classes[bestId].name, icon: "🏷️" };
+    const classObj = state.classes[bestId];
+    return {
+      id: bestId,
+      name: meta.en,
+      nameVi: meta.vi,
+      icon: meta.icon,
+      hex: classObj.hex,
+      rgb: classObj.rgb
+    };
+  }
+  return null;
+}
+
+let currentHoveredClassId = null;
+
+function handleImageHover(e) {
+  if (!el.baseImage || !el.baseImage.naturalWidth || !el.baseImage.src) {
+    hideClassHover();
+    return;
+  }
+  if (state.isDrawing || state.isDraggingSplit) {
+    hideClassHover();
+    return;
+  }
+
+  const rect = el.baseImage.getBoundingClientRect();
+  if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+    hideClassHover();
+    return;
+  }
+
+  const normX = (e.clientX - rect.left) / rect.width;
+  const normY = (e.clientY - rect.top) / rect.height;
+  const imgX = Math.max(0, Math.min(el.baseImage.naturalWidth - 1, Math.floor(normX * el.baseImage.naturalWidth)));
+  const imgY = Math.max(0, Math.min(el.baseImage.naturalHeight - 1, Math.floor(normY * el.baseImage.naturalHeight)));
+
+  let targetCtx = null;
+  let modelBadgeText = '';
+
+  if (state.viewMode === 'ab') {
+    if (normX < state.splitRatio) {
+      targetCtx = getOffscreenContext('maskA', state.modelAMaskImg);
+      modelBadgeText = 'Model A (v1)';
+    } else {
+      targetCtx = getOffscreenContext('maskB', state.modelBMaskImg);
+      modelBadgeText = 'Model B (v2)';
+    }
+  } else if (state.viewMode === 'gt') {
+    targetCtx = getOffscreenContext('gt', state.gtColorImg);
+    modelBadgeText = 'Ground Truth';
+  } else if (state.mode === 'annotate' && state.annotatedImageData) {
+    const idx = (imgY * state.annotatedImageData.width + imgX) * 4;
+    const r = state.annotatedImageData.data[idx];
+    const g = state.annotatedImageData.data[idx + 1];
+    const b = state.annotatedImageData.data[idx + 2];
+    const a = state.annotatedImageData.data[idx + 3];
+    showClassHover(r, g, b, a, imgX, imgY, e.clientX, e.clientY, 'Vẽ tay');
+    return;
+  } else {
+    targetCtx = getOffscreenContext('mask', state.colorMaskImg);
+  }
+
+  if (!targetCtx) {
+    hideClassHover();
+    return;
+  }
+
+  try {
+    const pixel = targetCtx.getImageData(imgX, imgY, 1, 1).data;
+    showClassHover(pixel[0], pixel[1], pixel[2], pixel[3], imgX, imgY, e.clientX, e.clientY, modelBadgeText);
+  } catch (err) {
+    hideClassHover();
+  }
+}
+
+function showClassHover(r, g, b, a, imgX, imgY, clientX, clientY, modelBadgeText) {
+  const matched = findClassFromColor(r, g, b, a);
+  if (!matched) {
+    hideClassHover();
+    return;
+  }
+
+  // 1. Tooltip nổi theo con trỏ chuột
+  if (el.classHoverTooltip) {
+    el.classHoverTooltip.classList.remove('hidden');
+    if (el.tooltipColorDot) el.tooltipColorDot.style.backgroundColor = matched.hex;
+    if (el.tooltipIcon) el.tooltipIcon.innerText = matched.icon;
+    if (el.tooltipClassName) el.tooltipClassName.innerText = matched.name;
+    if (el.tooltipClassVi) el.tooltipClassVi.innerText = `(${matched.nameVi})`;
+    if (el.tooltipClassId) el.tooltipClassId.innerText = `ID: ${matched.id}`;
+    if (el.tooltipCoords) el.tooltipCoords.innerText = `X: ${imgX}, Y: ${imgY}`;
+    
+    if (el.tooltipModelBadge) {
+      if (modelBadgeText) {
+        el.tooltipModelBadge.classList.remove('hidden');
+        el.tooltipModelBadge.innerText = modelBadgeText;
+      } else {
+        el.tooltipModelBadge.classList.add('hidden');
+      }
+    }
+
+    const tooltipWidth = 210;
+    const tooltipHeight = 65;
+    let posX = clientX + 16;
+    let posY = clientY + 16;
+    if (posX + tooltipWidth > window.innerWidth) posX = clientX - tooltipWidth - 12;
+    if (posY + tooltipHeight > window.innerHeight) posY = clientY - tooltipHeight - 12;
+    el.classHoverTooltip.style.left = `${posX}px`;
+    el.classHoverTooltip.style.top = `${posY}px`;
+  }
+
+  // 2. HUD Inspector ở góc dưới bên trái màn hình Canvas
+  if (el.canvasPixelInspector) {
+    el.canvasPixelInspector.classList.remove('hidden');
+    el.canvasPixelInspector.classList.add('flex');
+    if (el.inspectorColorDot) el.inspectorColorDot.style.backgroundColor = matched.hex;
+    if (el.inspectorClassName) el.inspectorClassName.innerText = `${matched.icon} ${matched.name} (${matched.nameVi})`;
+    if (el.inspectorCoords) el.inspectorCoords.innerText = `X: ${imgX} Y: ${imgY}`;
+  }
+
+  // 3. Highlight dòng lớp tương ứng ở cột phải
+  if (currentHoveredClassId !== matched.id) {
+    if (currentHoveredClassId !== null) {
+      const prevItem = document.getElementById(`classItem_${currentHoveredClassId}`);
+      if (prevItem) prevItem.classList.remove('class-item-hovered');
+    }
+    currentHoveredClassId = matched.id;
+    const currItem = document.getElementById(`classItem_${matched.id}`);
+    if (currItem) {
+      currItem.classList.add('class-item-hovered');
+      currItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+}
+
+function hideClassHover() {
+  if (el.classHoverTooltip) el.classHoverTooltip.classList.add('hidden');
+  if (el.canvasPixelInspector) {
+    el.canvasPixelInspector.classList.add('hidden');
+    el.canvasPixelInspector.classList.remove('flex');
+  }
+  if (currentHoveredClassId !== null) {
+    const prevItem = document.getElementById(`classItem_${currentHoveredClassId}`);
+    if (prevItem) prevItem.classList.remove('class-item-hovered');
+    currentHoveredClassId = null;
+  }
 }
 
 function toggleSingleClass(classId, isChecked) {
@@ -1339,6 +1570,12 @@ function setupEventListeners() {
         alert('Lỗi khi chuyển model: ' + err.message);
       }
     });
+  }
+
+  // Lắng nghe sự kiện hover chuột trên ảnh để hiển thị tên Class trực quan
+  if (el.imageWrapper) {
+    el.imageWrapper.addEventListener('mousemove', handleImageHover);
+    el.imageWrapper.addEventListener('mouseleave', hideClassHover);
   }
 }
 
