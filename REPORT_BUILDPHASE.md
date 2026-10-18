@@ -1,8 +1,8 @@
-# BÁO CÁO TỔNG KẾT DỰ ÁN BUILDPHASE (ĐỘI T-017)
+# BÁO CÁO TỔNG KẾT DỰ ÁN BUILDPHASE (ĐỘI P-017)
 
 * **Đề tài:** Fine-tune mô hình Semantic Segmentation trên tập dữ liệu xe tự hành BDD100K (19 classes) & Xây dựng nền tảng kiểm duyệt chất lượng gán nhãn SegVision QA.
 * **Thời gian thực hiện:** Giai đoạn Buildphase
-* **Mã nguồn:** [https://github.com/namng11/buildphaseT017.git](https://github.com/namng11/buildphaseT017.git)
+* **Mã nguồn công cụ:** [https://github.com/AI20K-Build-Phase-Cohort-4A/P-017/tree/main/source-tool/segvision-qa](https://github.com/AI20K-Build-Phase-Cohort-4A/P-017/tree/main/source-tool/segvision-qa)
 
 ---
 
